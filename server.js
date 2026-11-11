@@ -20,6 +20,7 @@ setInterval(() => {
 
 // ── Configuración ────────────────────────────────────────────────
 const ALERT_CHANNEL_ID = '1570192447605047367';
+const GREMIO_ROL_ID    = '890402384923197461';
 
 // Hora del boss semanal en UTC (Sábado 21:30 CLT = Chile UTC-3 → Domingo 00:30 UTC)
 const BOSS_UTC_DAY    = 0;   // 0 = Domingo UTC (= Sábado noche Chile)
@@ -28,6 +29,11 @@ const BOSS_UTC_MINUTE = 30;
 
 // Alertas: minutos antes del boss
 const ALERTS_BEFORE = [20, 10, 5];
+
+// Recordatorio jueves (Jueves 20:00 CLT = Jueves 23:00 UTC)
+const JUEVES_UTC_DAY  = 4;   // 4 = Jueves UTC
+const JUEVES_UTC_HOUR = 23;
+const JUEVES_UTC_MIN  = 0;
 
 // ── Cliente Discord ──────────────────────────────────────────────
 const client = new Client({
@@ -70,15 +76,14 @@ setInterval(async () => {
   // Semana actual como clave para no repetir alertas
   const weekKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${Math.floor(now.getUTCDate() / 7)}`;
 
+  // ── Alertas de boss (sábado) ─────────────────────────────────
   for (const minBefore of ALERTS_BEFORE) {
-    // Calcular a qué hora UTC debe salir esta alerta
     const alertTotalMin = BOSS_UTC_HOUR * 60 + BOSS_UTC_MINUTE - minBefore;
     const alertHour = Math.floor(((alertTotalMin % 1440) + 1440) % 1440 / 60);
     const alertMin  = ((alertTotalMin % 60) + 60) % 60;
-    // Si la alerta cae en día anterior ajustamos
     const alertDay  = alertTotalMin < 0 ? (BOSS_UTC_DAY + 6) % 7 : BOSS_UTC_DAY;
 
-    const key = `${weekKey}-${minBefore}`;
+    const key = `${weekKey}-boss-${minBefore}`;
 
     if (
       utcDay  === alertDay  &&
@@ -90,6 +95,19 @@ setInterval(async () => {
       await enviarAlerta(minBefore);
     }
   }
+
+  // ── Recordatorio jueves 20:00 CLT ────────────────────────────
+  const keyJueves = `${weekKey}-jueves`;
+  if (
+    utcDay  === JUEVES_UTC_DAY  &&
+    utcHour === JUEVES_UTC_HOUR &&
+    utcMin  === JUEVES_UTC_MIN  &&
+    !alertaEnviada.has(keyJueves)
+  ) {
+    alertaEnviada.add(keyJueves);
+    await enviarRecordatorioJueves();
+  }
+
 }, 30_000); // revisar cada 30 segundos
 
 async function enviarAlerta(minBefore) {
@@ -109,6 +127,30 @@ async function enviarAlerta(minBefore) {
     console.log(`🔔 Alerta enviada: ${minBefore} minutos antes`);
   } catch (err) {
     console.error('Error enviando alerta:', err.message);
+  }
+}
+
+async function enviarRecordatorioJueves() {
+  try {
+    const channel = await client.channels.fetch(ALERT_CHANNEL_ID);
+    const bossTs  = getNextBossTimestamp();
+
+    const embed = new EmbedBuilder()
+      .setColor(0x9b59b6)
+      .setTitle('📅 ¡Boss Semanal este Sábado!')
+      .setDescription(
+        `<@&${GREMIO_ROL_ID}> @everyone\n\n` +
+        `El Boss Semanal es el <t:${bossTs}:F>\n` +
+        `Faltan: **<t:${bossTs}:R>**`
+      )
+      .addFields({ name: '⏰ Hora', value: 'Sábado 21:30 (hora Chile)', inline: true })
+      .setFooter({ text: 'Black Desert Online • Recordatorio semanal' })
+      .setTimestamp();
+
+    await channel.send({ content: `<@&${GREMIO_ROL_ID}> @everyone`, embeds: [embed] });
+    console.log('📅 Recordatorio de jueves enviado');
+  } catch (err) {
+    console.error('Error enviando recordatorio jueves:', err.message);
   }
 }
 
