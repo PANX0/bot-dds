@@ -153,10 +153,9 @@ client.on('messageCreate', async (message) => {
     return;
   }
 
-  // ── !test (solo para pruebas, eliminar luego) ────────────────
+  // ── !test ────────────────────────────────────────────────────
   if (message.content.toLowerCase() === '!test') {
     await message.reply('✅ Bot funcionando correctamente.');
-    await enviarAlerta(20); // simula alerta de 20 min
     return;
   }
 });
