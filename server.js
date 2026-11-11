@@ -19,7 +19,7 @@ setInterval(() => {
 }, 280000);
 
 // ── Configuración ────────────────────────────────────────────────
-const ALERT_CHANNEL_ID = '808491801508839509';
+const ALERT_CHANNEL_ID = '1570192447605047367';
 
 // Hora del boss semanal en UTC (Sábado 21:30 CLT = Chile UTC-3 → Domingo 00:30 UTC)
 const BOSS_UTC_DAY    = 0;   // 0 = Domingo UTC (= Sábado noche Chile)
